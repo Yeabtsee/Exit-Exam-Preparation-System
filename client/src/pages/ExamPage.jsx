@@ -40,6 +40,7 @@ export default function ExamPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showAllMode, setShowAllMode] = useState(true);
   const [timeElapsed, setTimeElapsed] = useState(0);
+  const [revealedAnswers, setRevealedAnswers] = useState(new Set());
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [showResumePrompt, setShowResumePrompt] = useState(!!existingDraft);
   const timerRef = useRef(null);
@@ -326,6 +327,8 @@ export default function ExamPage() {
           const correctChoice = q.choices.find(c => c.isCorrect);
           const isAnswered = !!selectedChoiceId;
           const bookmarked = bookmarks.includes(q.id);
+          const isRevealed = revealedAnswers.has(q.id);
+          const showFeedback = isSubmitted || isRevealed;
 
           return (
             <div
@@ -371,7 +374,7 @@ export default function ExamPage() {
                   const isSelected = selectedChoiceId === choice.id;
                   let stateClass = '';
 
-                  if (isSubmitted) {
+                  if (showFeedback) {
                     if (choice.isCorrect) {
                       stateClass = 'choice-correct';
                     } else if (isSelected && !choice.isCorrect) {
@@ -385,25 +388,25 @@ export default function ExamPage() {
                     <button
                       key={choice.id}
                       onClick={() => handleAnswer(q.id, choice.id)}
-                      disabled={isSubmitted}
-                      className={`choice-btn w-full text-left p-3 rounded-xl border border-[var(--color-border)] text-sm flex items-center gap-3 ${stateClass} ${isSubmitted ? 'choice-disabled' : ''}`}
+                      disabled={isSubmitted || isRevealed}
+                      className={`choice-btn w-full text-left p-3 rounded-xl border border-[var(--color-border)] text-sm flex items-center gap-3 ${stateClass} ${(isSubmitted || isRevealed) ? 'choice-disabled' : ''}`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                         isSelected
-                          ? isSubmitted
+                          ? showFeedback
                             ? choice.isCorrect ? 'border-success bg-success' : 'border-danger bg-danger'
                             : 'border-primary bg-primary'
-                          : isSubmitted && choice.isCorrect
+                          : showFeedback && choice.isCorrect
                             ? 'border-success'
                             : 'border-[var(--color-border)]'
                       }`}>
-                        {isSubmitted && choice.isCorrect && (
+                        {showFeedback && choice.isCorrect && (
                           <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                         )}
-                        {isSubmitted && isSelected && !choice.isCorrect && (
+                        {showFeedback && isSelected && !choice.isCorrect && (
                           <XCircle className="w-3.5 h-3.5 text-white" />
                         )}
-                        {!isSubmitted && isSelected && (
+                        {!showFeedback && isSelected && (
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
@@ -413,14 +416,38 @@ export default function ExamPage() {
                 })}
               </div>
 
+              {/* View Answer button — only show before submit and when not yet revealed */}
+              {!isSubmitted && !isRevealed && (
+                <button
+                  onClick={() => setRevealedAnswers(prev => new Set([...prev, q.id]))}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--color-text-muted)] hover:text-accent hover:bg-accent/10 border border-[var(--color-border)] hover:border-accent/30 transition-all"
+                >
+                  <Eye className="w-3.5 h-3.5" /> View Answer
+                </button>
+              )}
+
+              {/* Hide Answer button — show when revealed but not submitted */}
+              {!isSubmitted && isRevealed && (
+                <button
+                  onClick={() => setRevealedAnswers(prev => {
+                    const next = new Set(prev);
+                    next.delete(q.id);
+                    return next;
+                  })}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-accent bg-accent/10 border border-accent/30 transition-all"
+                >
+                  <EyeOff className="w-3.5 h-3.5" /> Hide Answer
+                </button>
+              )}
+
               {/* Show correct answer feedback */}
-              {isSubmitted && selectedChoiceId && !q.choices.find(c => c.id === selectedChoiceId)?.isCorrect && (
+              {showFeedback && selectedChoiceId && !q.choices.find(c => c.id === selectedChoiceId)?.isCorrect && (
                 <div className="mt-3 p-3 rounded-lg bg-success/10 border border-success/20 text-xs">
                   <span className="font-medium text-success">Correct answer: </span>
                   <span className="text-[var(--color-text-primary)]">{correctChoice?.value}</span>
                 </div>
               )}
-              {isSubmitted && !selectedChoiceId && (
+              {showFeedback && !selectedChoiceId && (
                 <div className="mt-3 p-3 rounded-lg bg-warning/10 border border-warning/20 text-xs">
                   <span className="font-medium text-warning">Not answered. </span>
                   <span className="text-[var(--color-text-primary)]">Correct: {correctChoice?.value}</span>
