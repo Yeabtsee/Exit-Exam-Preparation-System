@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import examData, { CATEGORY_META } from '../data/examData';
 import { Link } from 'react-router-dom';
+import { QuestionText, ChoiceText } from '../components/QuestionText';
 import {
   Bookmark, BookOpen, ChevronDown, ChevronUp, CheckCircle2, BookmarkX
 } from 'lucide-react';
@@ -93,7 +94,7 @@ export default function BookmarksPage() {
                         onClick={() => toggleExpand(q.id)}
                       >
                         <div className="flex-1">
-                          <p className="text-sm leading-relaxed">{q.question}</p>
+                          <div className="text-sm leading-relaxed"><QuestionText text={q.question} /></div>
                           <div className="text-xs text-[var(--color-text-muted)] mt-1">
                             {q.examTitle?.split('(')[0]?.trim()}
                           </div>
@@ -117,14 +118,14 @@ export default function BookmarksPage() {
                           {q.choices.map(choice => (
                             <div
                               key={choice.id}
-                              className={`p-2.5 rounded-lg text-sm flex items-center gap-2 ${
+                              className={`p-2.5 rounded-lg text-sm flex items-start gap-2 ${
                                 choice.isCorrect
                                   ? 'bg-success/10 border border-success/20'
                                   : 'bg-[var(--color-surface)] border border-[var(--color-border)]'
                               }`}
                             >
-                              {choice.isCorrect && <CheckCircle2 className="w-4 h-4 text-success shrink-0" />}
-                              <span>{choice.value}</span>
+                              {choice.isCorrect && <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />}
+                              <span className="flex-1 break-words"><ChoiceText text={choice.value} /></span>
                             </div>
                           ))}
                         </div>

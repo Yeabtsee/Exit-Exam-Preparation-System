@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import examData, { CATEGORY_META } from '../data/examData';
 import { saveAttempt, getDraft, saveDraft, deleteDraft } from '../utils/storage';
 import { shuffleArray, formatTime } from '../utils/helpers';
+import { QuestionText, ChoiceText } from '../components/QuestionText';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ArrowRight, BookmarkPlus, BookmarkCheck,
@@ -285,7 +286,7 @@ export default function ExamPage() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-lg truncate">{exam.title}</h1>
+            <h1 className="font-bold text-lg">{exam.title}</h1>
             <div className="text-xs text-[var(--color-text-muted)] flex flex-wrap items-center gap-2">
               <span>{questions.length} questions</span>
               {categoryFilter && (
@@ -354,7 +355,9 @@ export default function ExamPage() {
                       {q.category}
                     </span>
                   </div>
-                  <p className="text-sm leading-relaxed font-medium">{q.question}</p>
+                  <div className="text-sm leading-relaxed font-medium">
+                    <QuestionText text={q.question} />
+                  </div>
                 </div>
                 <button
                   onClick={() => toggleBookmark(q.id)}
@@ -389,9 +392,9 @@ export default function ExamPage() {
                       key={choice.id}
                       onClick={() => handleAnswer(q.id, choice.id)}
                       disabled={isSubmitted || isRevealed}
-                      className={`choice-btn w-full text-left p-3 rounded-xl border border-[var(--color-border)] text-sm flex items-center gap-3 ${stateClass} ${(isSubmitted || isRevealed) ? 'choice-disabled' : ''}`}
+                      className={`choice-btn w-full text-left p-3 rounded-xl border border-[var(--color-border)] text-sm flex items-start gap-3 ${stateClass} ${(isSubmitted || isRevealed) ? 'choice-disabled' : ''}`}
                     >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
                         isSelected
                           ? showFeedback
                             ? choice.isCorrect ? 'border-success bg-success' : 'border-danger bg-danger'
@@ -410,7 +413,7 @@ export default function ExamPage() {
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
-                      <span className="flex-1">{choice.value}</span>
+                      <span className="flex-1 break-words whitespace-normal"><ChoiceText text={choice.value} /></span>
                     </button>
                   );
                 })}

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAttempts } from '../utils/storage';
 import { CATEGORY_META } from '../data/examData';
 import { getScoreColor, getScoreMessage, formatTime } from '../utils/helpers';
+import { QuestionText } from '../components/QuestionText';
 import {
   Trophy, Clock, Target, CheckCircle2, XCircle, ArrowLeft,
   RotateCcw, ChevronRight, BookOpen, AlertCircle, List
@@ -164,21 +165,21 @@ export default function ResultsPage() {
                     {mq.category}
                   </span>
                 </div>
-                <p className="text-sm mb-3 leading-relaxed">{mq.question}</p>
+                <div className="text-sm mb-3 leading-relaxed"><QuestionText text={mq.question} /></div>
                 {mq.selectedAnswer && (
                   <div className="flex items-start gap-2 mb-2 text-xs">
                     <XCircle className="w-3.5 h-3.5 text-danger shrink-0 mt-0.5" />
-                    <div>
+                    <div className="flex-1 break-words">
                       <span className="text-[var(--color-text-muted)]">Your answer: </span>
-                      <span className="text-danger">{mq.selectedAnswer}</span>
+                      <span className="text-danger"><ChoiceText text={mq.selectedAnswer} /></span>
                     </div>
                   </div>
                 )}
                 <div className="flex items-start gap-2 text-xs">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
-                  <div>
+                  <div className="flex-1 break-words">
                     <span className="text-[var(--color-text-muted)]">Correct answer: </span>
-                    <span className="text-success font-medium">{mq.correctAnswer}</span>
+                    <span className="text-success font-medium"><ChoiceText text={mq.correctAnswer} /></span>
                   </div>
                 </div>
               </div>
