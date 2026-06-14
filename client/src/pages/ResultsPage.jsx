@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getAttempts } from '../utils/storage';
 import { CATEGORY_META } from '../data/examData';
 import { getScoreColor, getScoreMessage, formatTime } from '../utils/helpers';
-import { QuestionText } from '../components/QuestionText';
+import { QuestionText, ChoiceText } from '../components/QuestionText';
 import {
   Trophy, Clock, Target, CheckCircle2, XCircle, ArrowLeft,
   RotateCcw, ChevronRight, BookOpen, AlertCircle, List

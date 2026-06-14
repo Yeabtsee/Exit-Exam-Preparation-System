@@ -179,5 +179,3 @@ function RichText({ content }) {
     </span>
   );
 }
-
-export default QuestionText;

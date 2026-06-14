@@ -128,73 +128,83 @@ export default function ExamPage() {
   }, [isSubmitted]);
 
   const handleSubmit = useCallback(() => {
-    if (Object.keys(answers).length === 0) {
-      toast.warning('Please answer at least one question before submitting.');
-      return;
-    }
-
-    clearInterval(timerRef.current);
-    setIsSubmitted(true);
-
-    // Delete the draft since it's now submitted
-    deleteDraft(examId);
-
-    // Calculate score
-    let correct = 0;
-    const missedQuestions = [];
-    const categoryBreakdown = {};
-
-    questions.forEach(q => {
-      const cat = q.category;
-      if (!categoryBreakdown[cat]) categoryBreakdown[cat] = { correct: 0, total: 0 };
-      categoryBreakdown[cat].total++;
-
-      const selectedChoiceId = answers[q.id];
-      const correctChoice = q.choices.find(c => c.isCorrect);
-      const isCorrect = selectedChoiceId && q.choices.find(c => c.id === selectedChoiceId)?.isCorrect;
-
-      if (isCorrect) {
-        correct++;
-        categoryBreakdown[cat].correct++;
-      } else {
-        missedQuestions.push({
-          questionId: q.id,
-          question: q.question,
-          selectedAnswer: selectedChoiceId ? q.choices.find(c => c.id === selectedChoiceId)?.value : null,
-          correctAnswer: correctChoice?.value,
-          category: q.category,
-        });
+    try {
+      if (Object.keys(answers).length === 0) {
+        toast.warning('Please answer at least one question before submitting.');
+        return;
       }
-    });
 
-    const attempt = {
-      examId: exam.id,
-      examTitle: exam.title,
-      score: correct,
-      total: questions.length,
-      timeElapsed,
-      missedQuestions,
-      categoryBreakdown,
-      categoryFilter: categoryFilter || null,
-    };
+      clearInterval(timerRef.current);
+      setIsSubmitted(true);
 
-    const attempts = saveAttempt(attempt);
-    refreshStats();
+      // Delete the draft since it's now submitted
+      deleteDraft(examId);
 
-    const newAttemptId = attempts[0].id;
-    const pct = Math.round((correct / questions.length) * 100);
+      // Calculate score
+      let correct = 0;
+      const missedQuestions = [];
+      const categoryBreakdown = {};
 
-    if (pct >= 80) {
-      toast.success(`Excellent! You scored ${pct}%! 🎉`);
-    } else if (pct >= 60) {
-      toast.info(`Good job! You scored ${pct}%. Keep going! 💪`);
-    } else {
-      toast.warning(`You scored ${pct}%. Keep practicing! 📚`);
+      questions.forEach(q => {
+        const cat = q.category;
+        if (!categoryBreakdown[cat]) categoryBreakdown[cat] = { correct: 0, total: 0 };
+        categoryBreakdown[cat].total++;
+
+        const selectedChoiceId = answers[q.id];
+        const correctChoice = q.choices.find(c => c.isCorrect);
+        const isCorrect = selectedChoiceId && q.choices.find(c => c.id === selectedChoiceId)?.isCorrect;
+
+        if (isCorrect) {
+          correct++;
+          categoryBreakdown[cat].correct++;
+        } else {
+          missedQuestions.push({
+            questionId: q.id,
+            question: q.question,
+            selectedAnswer: selectedChoiceId ? q.choices.find(c => c.id === selectedChoiceId)?.value : null,
+            correctAnswer: correctChoice?.value,
+            category: q.category,
+          });
+        }
+      });
+
+      const attempt = {
+        examId: exam.id,
+        examTitle: exam.title,
+        score: correct,
+        total: questions.length,
+        timeElapsed,
+        missedQuestions,
+        categoryBreakdown,
+        categoryFilter: categoryFilter || null,
+      };
+
+      const attempts = saveAttempt(attempt);
+      refreshStats();
+
+      const newAttemptId = attempts[0]?.id;
+      const pct = Math.round((correct / questions.length) * 100);
+
+      if (pct >= 80) {
+        toast.success(`Excellent! You scored ${pct}%! 🎉`);
+      } else if (pct >= 60) {
+        toast.info(`Good job! You scored ${pct}%. Keep going! 💪`);
+      } else {
+        toast.warning(`You scored ${pct}%. Keep practicing! 📚`);
+      }
+
+      if (newAttemptId) {
+        setTimeout(() => {
+          navigate(`/results/${newAttemptId}`);
+        }, 1500);
+      } else {
+        throw new Error('Failed to retrieve new attempt ID');
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast.error('An error occurred while submitting your exam. Please try again.');
+      setIsSubmitted(false); // Let them try again if it failed
     }
-
-    setTimeout(() => {
-      navigate(`/results/${newAttemptId}`);
-    }, 1500);
   }, [answers, questions, exam, timeElapsed, categoryFilter, navigate, refreshStats, examId]);
 
   const handleReset = useCallback(() => {
