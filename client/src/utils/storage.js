@@ -1,9 +1,9 @@
 const KEYS = {
-  ATTEMPTS: 'examprep_attempts',
-  BOOKMARKS: 'examprep_bookmarks',
-  SETTINGS: 'examprep_settings',
-  STREAKS: 'examprep_streaks',
-  DRAFTS: 'examprep_drafts',
+  ATTEMPTS: "examprep_attempts",
+  BOOKMARKS: "examprep_bookmarks",
+  SETTINGS: "examprep_settings",
+  STREAKS: "examprep_streaks",
+  DRAFTS: "examprep_drafts",
 };
 
 function safeGet(key, fallback) {
@@ -19,7 +19,7 @@ function safeSet(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.warn('localStorage write failed:', e);
+    console.warn("localStorage write failed:", e);
   }
 }
 
@@ -43,17 +43,17 @@ export function saveAttempt(attempt) {
 }
 
 export function getAttemptsByExam(examId) {
-  return getAttempts().filter(a => a.examId === examId);
+  return getAttempts().filter((a) => a.examId === examId);
 }
 
 export function getBestScore(examId) {
   const attempts = getAttemptsByExam(examId);
   if (attempts.length === 0) return null;
-  return Math.max(...attempts.map(a => (a.score / a.total) * 100));
+  return Math.max(...attempts.map((a) => (a.score / a.total) * 100));
 }
 
 export function clearAllData() {
-  Object.values(KEYS).forEach(key => localStorage.removeItem(key));
+  Object.values(KEYS).forEach((key) => localStorage.removeItem(key));
 }
 
 // --- Drafts (Ongoing Exams) ---
@@ -86,7 +86,9 @@ export function deleteDraft(examId) {
 
 export function getAllDrafts() {
   const drafts = getDrafts();
-  return Object.values(drafts).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  return Object.values(drafts).sort(
+    (a, b) => new Date(b.savedAt) - new Date(a.savedAt),
+  );
 }
 
 // --- Bookmarks ---
@@ -116,7 +118,7 @@ export function getSettings() {
     darkMode: true,
     shuffleQuestions: false,
     showTimer: true,
-    questionMode: 'all', // 'all' or 'one'
+    questionMode: "all", // 'all' or 'one'
   });
 }
 
@@ -138,8 +140,8 @@ export function getStreaks() {
 
 function updateStreak() {
   const streaks = getStreaks();
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
   if (streaks.lastStudyDate === today) return streaks;
 
@@ -162,72 +164,42 @@ function updateStreak() {
 // --- Analytics ---
 export function getOverallStats() {
   const attempts = getAttempts();
+  const totalQuestions = attempts.reduce((s, a) => s + a.total, 0);
+  const totalCorrect = attempts.reduce((s, a) => s + a.score, 0);
+  const accuracy =
+    totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const streaks = getStreaks();
-
-  const uniqueAttempted = new Set();
-  const uniqueCorrect = new Set();
-
-  attempts.forEach(a => {
-    // New format with explicit metadata
-    if (a.attemptedQuestionMetadata && a.correctQuestionMetadata) {
-      a.attemptedQuestionMetadata.forEach(q => uniqueAttempted.add(q.id));
-      a.correctQuestionMetadata.forEach(q => uniqueCorrect.add(q.id));
-    }
-    // Middle format (IDs only)
-    else if (a.attemptedQuestionIds && a.correctQuestionIds) {
-      a.attemptedQuestionIds.forEach(id => uniqueAttempted.add(id));
-      a.correctQuestionIds.forEach(id => uniqueCorrect.add(id));
-    } else {
-      // Fallback for older attempts: we only know missed IDs for sure
-      if (a.missedQuestions) {
-        a.missedQuestions.forEach(mq => uniqueAttempted.add(mq.questionId));
-      }
-    }
-  });
-
-  const totalQuestions = uniqueAttempted.size;
-  const totalCorrect = uniqueCorrect.size;
-  const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
   return {
     totalAttempts: attempts.length,
-    totalQuestions, // This is now unique count
-    totalCorrect,   // This is now unique correct count
-    accuracy,       // This is now unique accuracy
+    totalQuestions,
+    totalCorrect,
+    accuracy,
     ...streaks,
   };
 }
 
 export function getCategoryStats() {
   const attempts = getAttempts();
-  const categoryMap = {}; // { categoryName: { attemptedSets: Set, correctSets: Set } }
+  const categoryMap = {};
 
-  attempts.forEach(attempt => {
-    // Priority: New metadata
-    if (attempt.attemptedQuestionMetadata && attempt.correctQuestionMetadata) {
-      attempt.attemptedQuestionMetadata.forEach(q => {
-        if (!categoryMap[q.category]) categoryMap[q.category] = { attempted: new Set(), correct: new Set() };
-        categoryMap[q.category].attempted.add(q.id);
+  attempts.forEach((attempt) => {
+    if (attempt.categoryBreakdown) {
+      Object.entries(attempt.categoryBreakdown).forEach(([cat, data]) => {
+        if (!categoryMap[cat]) categoryMap[cat] = { correct: 0, total: 0 };
+        categoryMap[cat].correct += data.correct;
+        categoryMap[cat].total += data.total;
       });
-      attempt.correctQuestionMetadata.forEach(q => {
-        if (!categoryMap[q.category]) categoryMap[q.category] = { attempted: new Set(), correct: new Set() };
-        categoryMap[q.category].correct.add(q.id);
-      });
-    }
-    // Fallback: Use missedQuestions to at least get attempted IDs for some categories
-    else if (attempt.missedQuestions) {
-      attempt.missedQuestions.forEach(mq => {
-        if (!categoryMap[mq.category]) categoryMap[mq.category] = { attempted: new Set(), correct: new Set() };
-        categoryMap[mq.category].attempted.add(mq.questionId);
-      });
-      // For correct ones in fallback, we lack IDs, so check categoryBreakdown for raw counts if unique not possible
     }
   });
 
-  return Object.entries(categoryMap).map(([name, data]) => ({
-    name,
-    correct: data.correct.size,
-    total: data.attempted.size,
-    accuracy: data.attempted.size > 0 ? Math.round((data.correct.size / data.attempted.size) * 100) : 0,
-  })).sort((a, b) => a.accuracy - b.accuracy);
+  return Object.entries(categoryMap)
+    .map(([name, data]) => ({
+      name,
+      correct: data.correct,
+      total: data.total,
+      accuracy:
+        data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
+    }))
+    .sort((a, b) => a.accuracy - b.accuracy);
 }

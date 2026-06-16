@@ -1,31 +1,49 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
-import examData, { CATEGORY_META } from '../data/examData';
-import { saveAttempt, getDraft, saveDraft, deleteDraft } from '../utils/storage';
-import { shuffleArray, formatTime } from '../utils/helpers';
-import { QuestionText, ChoiceText } from '../components/QuestionText';
-import { toast } from 'sonner';
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useApp } from "../context/AppContext";
+import examData, { CATEGORY_META } from "../data/examData";
 import {
-  ArrowLeft, ArrowRight, BookmarkPlus, BookmarkCheck,
-  Clock, Shuffle, CheckCircle2, XCircle, ChevronLeft,
-  Send, RotateCcw, Eye, EyeOff, Filter, Play, Trash2
-} from 'lucide-react';
+  saveAttempt,
+  getDraft,
+  saveDraft,
+  deleteDraft,
+} from "../utils/storage";
+import { shuffleArray, formatTime } from "../utils/helpers";
+import { QuestionText, ChoiceText } from "../components/QuestionText";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookmarkPlus,
+  BookmarkCheck,
+  Clock,
+  Shuffle,
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  Send,
+  RotateCcw,
+  Eye,
+  EyeOff,
+  Filter,
+  Play,
+  Trash2,
+} from "lucide-react";
 
 export default function ExamPage() {
   const { examId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { settings, bookmarks, toggleBookmark, refreshStats } = useApp();
-  const categoryFilter = searchParams.get('category') || '';
+  const categoryFilter = searchParams.get("category") || "";
 
-  const exam = useMemo(() => examData.find(e => e.id === examId), [examId]);
+  const exam = useMemo(() => examData.find((e) => e.id === examId), [examId]);
 
   const questions = useMemo(() => {
     if (!exam) return [];
-    let qs = exam.questions.filter(q => !q.isFlashcard);
+    let qs = exam.questions.filter((q) => !q.isFlashcard);
     if (categoryFilter) {
-      qs = qs.filter(q => q.category === categoryFilter);
+      qs = qs.filter((q) => q.category === categoryFilter);
     }
     return settings.shuffleQuestions ? shuffleArray(qs) : qs;
   }, [exam, categoryFilter, settings.shuffleQuestions]);
@@ -51,16 +69,22 @@ export default function ExamPage() {
   const isSubmittedRef = useRef(isSubmitted);
 
   // Keep refs in sync
-  useEffect(() => { answersRef.current = answers; }, [answers]);
-  useEffect(() => { timeRef.current = timeElapsed; }, [timeElapsed]);
-  useEffect(() => { isSubmittedRef.current = isSubmitted; }, [isSubmitted]);
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+  useEffect(() => {
+    timeRef.current = timeElapsed;
+  }, [timeElapsed]);
+  useEffect(() => {
+    isSubmittedRef.current = isSubmitted;
+  }, [isSubmitted]);
 
   // Load draft if user chooses to resume
   const handleResume = useCallback(() => {
     if (existingDraft) {
       setAnswers(existingDraft.answers || {});
       setTimeElapsed(existingDraft.timeElapsed || 0);
-      toast.success('Draft restored! Continue where you left off.');
+      toast.success("Draft restored! Continue where you left off.");
     }
     setShowResumePrompt(false);
     setDraftLoaded(true);
@@ -73,7 +97,7 @@ export default function ExamPage() {
     setTimeElapsed(0);
     setShowResumePrompt(false);
     setDraftLoaded(true);
-    toast.info('Starting fresh. Good luck!');
+    toast.info("Starting fresh. Good luck!");
   }, [examId]);
 
   // Auto-start if no draft exists
@@ -87,7 +111,7 @@ export default function ExamPage() {
   // Timer — only runs after draft decision is made
   useEffect(() => {
     if (!isSubmitted && draftLoaded && !showResumePrompt) {
-      timerRef.current = setInterval(() => setTimeElapsed(t => t + 1), 1000);
+      timerRef.current = setInterval(() => setTimeElapsed((t) => t + 1), 1000);
     }
     return () => clearInterval(timerRef.current);
   }, [isSubmitted, draftLoaded, showResumePrompt]);
@@ -113,24 +137,27 @@ export default function ExamPage() {
     };
 
     // Save on beforeunload (tab close / browser close)
-    window.addEventListener('beforeunload', saveDraftOnExit);
+    window.addEventListener("beforeunload", saveDraftOnExit);
 
     // Save on component unmount (navigation away)
     return () => {
-      window.removeEventListener('beforeunload', saveDraftOnExit);
+      window.removeEventListener("beforeunload", saveDraftOnExit);
       saveDraftOnExit();
     };
   }, [examId, exam, questions.length, categoryFilter]);
 
-  const handleAnswer = useCallback((questionId, choiceId) => {
-    if (isSubmitted) return;
-    setAnswers(prev => ({ ...prev, [questionId]: choiceId }));
-  }, [isSubmitted]);
+  const handleAnswer = useCallback(
+    (questionId, choiceId) => {
+      if (isSubmitted) return;
+      setAnswers((prev) => ({ ...prev, [questionId]: choiceId }));
+    },
+    [isSubmitted],
+  );
 
   const handleSubmit = useCallback(() => {
     try {
       if (Object.keys(answers).length === 0) {
-        toast.warning('Please answer at least one question before submitting.');
+        toast.warning("Please answer at least one question before submitting.");
         return;
       }
 
@@ -144,28 +171,29 @@ export default function ExamPage() {
       let correct = 0;
       const missedQuestions = [];
       const categoryBreakdown = {};
-      const correctQuestionMetadata = [];
-      const attemptedQuestionMetadata = [];
 
-      questions.forEach(q => {
+      questions.forEach((q) => {
         const cat = q.category;
-        if (!categoryBreakdown[cat]) categoryBreakdown[cat] = { correct: 0, total: 0 };
+        if (!categoryBreakdown[cat])
+          categoryBreakdown[cat] = { correct: 0, total: 0 };
         categoryBreakdown[cat].total++;
-        attemptedQuestionMetadata.push({ id: q.id, category: q.category });
 
         const selectedChoiceId = answers[q.id];
-        const correctChoice = q.choices.find(c => c.isCorrect);
-        const isCorrect = selectedChoiceId && q.choices.find(c => c.id === selectedChoiceId)?.isCorrect;
+        const correctChoice = q.choices.find((c) => c.isCorrect);
+        const isCorrect =
+          selectedChoiceId &&
+          q.choices.find((c) => c.id === selectedChoiceId)?.isCorrect;
 
         if (isCorrect) {
           correct++;
           categoryBreakdown[cat].correct++;
-          correctQuestionMetadata.push({ id: q.id, category: q.category });
         } else {
           missedQuestions.push({
             questionId: q.id,
             question: q.question,
-            selectedAnswer: selectedChoiceId ? q.choices.find(c => c.id === selectedChoiceId)?.value : null,
+            selectedAnswer: selectedChoiceId
+              ? q.choices.find((c) => c.id === selectedChoiceId)?.value
+              : null,
             correctAnswer: correctChoice?.value,
             category: q.category,
           });
@@ -181,8 +209,6 @@ export default function ExamPage() {
         missedQuestions,
         categoryBreakdown,
         categoryFilter: categoryFilter || null,
-        correctQuestionMetadata,
-        attemptedQuestionMetadata,
       };
 
       const attempts = saveAttempt(attempt);
@@ -204,14 +230,25 @@ export default function ExamPage() {
           navigate(`/results/${newAttemptId}`);
         }, 1500);
       } else {
-        throw new Error('Failed to retrieve new attempt ID');
+        throw new Error("Failed to retrieve new attempt ID");
       }
     } catch (error) {
-      console.error('Submission error:', error);
-      toast.error('An error occurred while submitting your exam. Please try again.');
+      console.error("Submission error:", error);
+      toast.error(
+        "An error occurred while submitting your exam. Please try again.",
+      );
       setIsSubmitted(false); // Let them try again if it failed
     }
-  }, [answers, questions, exam, timeElapsed, categoryFilter, navigate, refreshStats, examId]);
+  }, [
+    answers,
+    questions,
+    exam,
+    timeElapsed,
+    categoryFilter,
+    navigate,
+    refreshStats,
+    examId,
+  ]);
 
   const handleReset = useCallback(() => {
     deleteDraft(examId);
@@ -227,7 +264,10 @@ export default function ExamPage() {
       <div className="glass-card p-12 text-center animate-fade-in">
         <XCircle className="w-12 h-12 mx-auto mb-3 text-danger" />
         <h2 className="text-xl font-bold mb-2">Exam Not Found</h2>
-        <button onClick={() => navigate('/exams')} className="text-primary-light hover:underline text-sm">
+        <button
+          onClick={() => navigate("/exams")}
+          className="text-primary-light hover:underline text-sm"
+        >
           ← Back to exam list
         </button>
       </div>
@@ -236,7 +276,9 @@ export default function ExamPage() {
 
   // --- Resume Prompt ---
   if (showResumePrompt && existingDraft) {
-    const draftPct = Math.round((existingDraft.answeredCount / existingDraft.totalQuestions) * 100);
+    const draftPct = Math.round(
+      (existingDraft.answeredCount / existingDraft.totalQuestions) * 100,
+    );
     return (
       <div className="max-w-lg mx-auto mt-12 animate-fade-in">
         <div className="glass-card p-8 text-center">
@@ -245,10 +287,13 @@ export default function ExamPage() {
           </div>
           <h2 className="text-xl font-bold mb-2">You have an ongoing exam</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mb-1">
-            {existingDraft.examTitle?.split('(')[0]?.trim()}
+            {existingDraft.examTitle?.split("(")[0]?.trim()}
           </p>
           <div className="flex items-center justify-center gap-4 text-sm text-[var(--color-text-muted)] mb-6">
-            <span>{existingDraft.answeredCount}/{existingDraft.totalQuestions} answered</span>
+            <span>
+              {existingDraft.answeredCount}/{existingDraft.totalQuestions}{" "}
+              answered
+            </span>
             <span>·</span>
             <span>{formatTime(existingDraft.timeElapsed || 0)} elapsed</span>
           </div>
@@ -277,7 +322,7 @@ export default function ExamPage() {
           </div>
 
           <button
-            onClick={() => navigate('/exams')}
+            onClick={() => navigate("/exams")}
             className="mt-4 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             ← Back to exams
@@ -296,7 +341,7 @@ export default function ExamPage() {
       <div className="glass-card p-4">
         <div className="flex items-center gap-3 mb-3">
           <button
-            onClick={() => navigate('/exams')}
+            onClick={() => navigate("/exams")}
             className="p-2 rounded-lg hover:bg-[var(--color-glass-light)] transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -306,10 +351,13 @@ export default function ExamPage() {
             <div className="text-xs text-[var(--color-text-muted)] flex flex-wrap items-center gap-2">
               <span>{questions.length} questions</span>
               {categoryFilter && (
-                <span className="category-badge" style={{
-                  color: CATEGORY_META[categoryFilter]?.color,
-                  background: `${CATEGORY_META[categoryFilter]?.color}15`,
-                }}>
+                <span
+                  className="category-badge"
+                  style={{
+                    color: CATEGORY_META[categoryFilter]?.color,
+                    background: `${CATEGORY_META[categoryFilter]?.color}15`,
+                  }}
+                >
                   {categoryFilter}
                 </span>
               )}
@@ -341,7 +389,7 @@ export default function ExamPage() {
       <div className="space-y-4">
         {questions.map((q, idx) => {
           const selectedChoiceId = answers[q.id];
-          const correctChoice = q.choices.find(c => c.isCorrect);
+          const correctChoice = q.choices.find((c) => c.isCorrect);
           const isAnswered = !!selectedChoiceId;
           const bookmarked = bookmarks.includes(q.id);
           const isRevealed = revealedAnswers.has(q.id);
@@ -350,7 +398,7 @@ export default function ExamPage() {
           return (
             <div
               key={q.id}
-              ref={el => (questionRefs.current[q.id] = el)}
+              ref={(el) => (questionRefs.current[q.id] = el)}
               className="glass-card p-5 stagger-item"
               id={`q-${idx}`}
             >
@@ -364,8 +412,8 @@ export default function ExamPage() {
                     <span
                       className="category-badge"
                       style={{
-                        color: CATEGORY_META[q.category]?.color || '#78716c',
-                        background: `${CATEGORY_META[q.category]?.color || '#78716c'}15`,
+                        color: CATEGORY_META[q.category]?.color || "#78716c",
+                        background: `${CATEGORY_META[q.category]?.color || "#78716c"}15`,
                       }}
                     >
                       {q.category}
@@ -379,11 +427,15 @@ export default function ExamPage() {
                   onClick={() => toggleBookmark(q.id)}
                   className={`p-1.5 rounded-lg transition-all shrink-0 ${
                     bookmarked
-                      ? 'text-warning bg-warning/10'
-                      : 'text-[var(--color-text-muted)] hover:text-warning hover:bg-warning/10'
+                      ? "text-warning bg-warning/10"
+                      : "text-[var(--color-text-muted)] hover:text-warning hover:bg-warning/10"
                   }`}
                 >
-                  {bookmarked ? <BookmarkCheck className="w-4 h-4" /> : <BookmarkPlus className="w-4 h-4" />}
+                  {bookmarked ? (
+                    <BookmarkCheck className="w-4 h-4" />
+                  ) : (
+                    <BookmarkPlus className="w-4 h-4" />
+                  )}
                 </button>
               </div>
 
@@ -391,16 +443,16 @@ export default function ExamPage() {
               <div className="space-y-2">
                 {q.choices.map((choice) => {
                   const isSelected = selectedChoiceId === choice.id;
-                  let stateClass = '';
+                  let stateClass = "";
 
                   if (showFeedback) {
                     if (choice.isCorrect) {
-                      stateClass = 'choice-correct';
+                      stateClass = "choice-correct";
                     } else if (isSelected && !choice.isCorrect) {
-                      stateClass = 'choice-incorrect';
+                      stateClass = "choice-incorrect";
                     }
                   } else if (isSelected) {
-                    stateClass = 'choice-selected';
+                    stateClass = "choice-selected";
                   }
 
                   return (
@@ -408,17 +460,21 @@ export default function ExamPage() {
                       key={choice.id}
                       onClick={() => handleAnswer(q.id, choice.id)}
                       disabled={isSubmitted || isRevealed}
-                      className={`choice-btn w-full text-left p-3 rounded-xl border border-[var(--color-border)] text-sm flex items-start gap-3 ${stateClass} ${(isSubmitted || isRevealed) ? 'choice-disabled' : ''}`}
+                      className={`choice-btn w-full text-left p-3 rounded-xl border border-[var(--color-border)] text-sm flex items-start gap-3 ${stateClass} ${isSubmitted || isRevealed ? "choice-disabled" : ""}`}
                     >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                        isSelected
-                          ? showFeedback
-                            ? choice.isCorrect ? 'border-success bg-success' : 'border-danger bg-danger'
-                            : 'border-primary bg-primary'
-                          : showFeedback && choice.isCorrect
-                            ? 'border-success'
-                            : 'border-[var(--color-border)]'
-                      }`}>
+                      <div
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                          isSelected
+                            ? showFeedback
+                              ? choice.isCorrect
+                                ? "border-success bg-success"
+                                : "border-danger bg-danger"
+                              : "border-primary bg-primary"
+                            : showFeedback && choice.isCorrect
+                              ? "border-success"
+                              : "border-[var(--color-border)]"
+                        }`}
+                      >
                         {showFeedback && choice.isCorrect && (
                           <CheckCircle2 className="w-3.5 h-3.5 text-white" />
                         )}
@@ -429,7 +485,9 @@ export default function ExamPage() {
                           <div className="w-2 h-2 rounded-full bg-white" />
                         )}
                       </div>
-                      <span className="flex-1 break-words whitespace-normal"><ChoiceText text={choice.value} /></span>
+                      <span className="flex-1 break-words whitespace-normal">
+                        <ChoiceText text={choice.value} />
+                      </span>
                     </button>
                   );
                 })}
@@ -438,7 +496,9 @@ export default function ExamPage() {
               {/* View Answer button — only show before submit and when not yet revealed */}
               {!isSubmitted && !isRevealed && (
                 <button
-                  onClick={() => setRevealedAnswers(prev => new Set([...prev, q.id]))}
+                  onClick={() =>
+                    setRevealedAnswers((prev) => new Set([...prev, q.id]))
+                  }
                   className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--color-text-muted)] hover:text-accent hover:bg-accent/10 border border-[var(--color-border)] hover:border-accent/30 transition-all"
                 >
                   <Eye className="w-3.5 h-3.5" /> View Answer
@@ -448,11 +508,13 @@ export default function ExamPage() {
               {/* Hide Answer button — show when revealed but not submitted */}
               {!isSubmitted && isRevealed && (
                 <button
-                  onClick={() => setRevealedAnswers(prev => {
-                    const next = new Set(prev);
-                    next.delete(q.id);
-                    return next;
-                  })}
+                  onClick={() =>
+                    setRevealedAnswers((prev) => {
+                      const next = new Set(prev);
+                      next.delete(q.id);
+                      return next;
+                    })
+                  }
                   className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-accent bg-accent/10 border border-accent/30 transition-all"
                 >
                   <EyeOff className="w-3.5 h-3.5" /> Hide Answer
@@ -460,16 +522,27 @@ export default function ExamPage() {
               )}
 
               {/* Show correct answer feedback */}
-              {showFeedback && selectedChoiceId && !q.choices.find(c => c.id === selectedChoiceId)?.isCorrect && (
-                <div className="mt-3 p-3 rounded-lg bg-success/10 border border-success/20 text-xs">
-                  <span className="font-medium text-success">Correct answer: </span>
-                  <span className="text-[var(--color-text-primary)]">{correctChoice?.value}</span>
-                </div>
-              )}
+              {showFeedback &&
+                selectedChoiceId &&
+                !q.choices.find((c) => c.id === selectedChoiceId)
+                  ?.isCorrect && (
+                  <div className="mt-3 p-3 rounded-lg bg-success/10 border border-success/20 text-xs">
+                    <span className="font-medium text-success">
+                      Correct answer:{" "}
+                    </span>
+                    <span className="text-[var(--color-text-primary)]">
+                      {correctChoice?.value}
+                    </span>
+                  </div>
+                )}
               {showFeedback && !selectedChoiceId && (
                 <div className="mt-3 p-3 rounded-lg bg-warning/10 border border-warning/20 text-xs">
-                  <span className="font-medium text-warning">Not answered. </span>
-                  <span className="text-[var(--color-text-primary)]">Correct: {correctChoice?.value}</span>
+                  <span className="font-medium text-warning">
+                    Not answered.{" "}
+                  </span>
+                  <span className="text-[var(--color-text-primary)]">
+                    Correct: {correctChoice?.value}
+                  </span>
                 </div>
               )}
             </div>
@@ -481,7 +554,10 @@ export default function ExamPage() {
       {!isSubmitted ? (
         <div className="sticky bottom-4 glass-card p-4 flex items-center justify-between gap-4 border-[var(--color-primary)]/30">
           <div className="text-sm text-[var(--color-text-secondary)]">
-            <span className="font-semibold text-[var(--color-text-primary)]">{answeredCount}</span> of {questions.length} answered
+            <span className="font-semibold text-[var(--color-text-primary)]">
+              {answeredCount}
+            </span>{" "}
+            of {questions.length} answered
           </div>
           <button
             onClick={handleSubmit}
@@ -499,7 +575,7 @@ export default function ExamPage() {
             <RotateCcw className="w-4 h-4" /> Retry
           </button>
           <button
-            onClick={() => navigate('/exams')}
+            onClick={() => navigate("/exams")}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-dark text-white font-medium shadow-lg shadow-primary/25 transition-all"
           >
             Next Exam <ArrowRight className="w-4 h-4" />
