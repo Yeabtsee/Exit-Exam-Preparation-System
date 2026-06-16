@@ -37,7 +37,33 @@ export default function ExamPage() {
   const { settings, bookmarks, toggleBookmark, refreshStats } = useApp();
   const categoryFilter = searchParams.get("category") || "";
 
-  const exam = useMemo(() => examData.find((e) => e.id === examId), [examId]);
+  const exam = useMemo(() => {
+    if (examId?.startsWith("cat_")) {
+      const category = decodeURIComponent(examId.replace("cat_", ""));
+      const allQuestions = [];
+      const seenIds = new Set();
+
+      // Collect all unique questions for this category across all sets
+      examData.forEach((set) => {
+        set.questions.forEach((q) => {
+          if (q.category === category && !seenIds.has(q.id)) {
+            allQuestions.push(q);
+            seenIds.add(q.id);
+          }
+        });
+      });
+
+      return {
+        id: examId,
+        title: `${category} Mastery`,
+        questionCount: allQuestions.length,
+        questions: allQuestions,
+        isCategoryMastery: true,
+        category: category,
+      };
+    }
+    return examData.find((e) => e.id === examId);
+  }, [examId]);
 
   const questions = useMemo(() => {
     if (!exam) return [];

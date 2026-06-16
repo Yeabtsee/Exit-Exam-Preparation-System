@@ -203,7 +203,7 @@ export default function Dashboard() {
           {categoryStats.map((cat, i) => (
             <Link
               key={cat.name}
-              to={`/exams?category=${encodeURIComponent(cat.name)}`}
+              to={`/exams?mode=categories&category=${encodeURIComponent(cat.name)}`}
               className="glass-card p-4 stagger-item group cursor-pointer"
             >
               <div
