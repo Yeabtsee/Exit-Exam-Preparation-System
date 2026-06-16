@@ -144,11 +144,14 @@ export default function ExamPage() {
       let correct = 0;
       const missedQuestions = [];
       const categoryBreakdown = {};
+      const correctQuestionMetadata = [];
+      const attemptedQuestionMetadata = [];
 
       questions.forEach(q => {
         const cat = q.category;
         if (!categoryBreakdown[cat]) categoryBreakdown[cat] = { correct: 0, total: 0 };
         categoryBreakdown[cat].total++;
+        attemptedQuestionMetadata.push({ id: q.id, category: q.category });
 
         const selectedChoiceId = answers[q.id];
         const correctChoice = q.choices.find(c => c.isCorrect);
@@ -157,6 +160,7 @@ export default function ExamPage() {
         if (isCorrect) {
           correct++;
           categoryBreakdown[cat].correct++;
+          correctQuestionMetadata.push({ id: q.id, category: q.category });
         } else {
           missedQuestions.push({
             questionId: q.id,
@@ -177,6 +181,8 @@ export default function ExamPage() {
         missedQuestions,
         categoryBreakdown,
         categoryFilter: categoryFilter || null,
+        correctQuestionMetadata,
+        attemptedQuestionMetadata,
       };
 
       const attempts = saveAttempt(attempt);

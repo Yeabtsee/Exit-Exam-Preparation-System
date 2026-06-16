@@ -162,38 +162,72 @@ function updateStreak() {
 // --- Analytics ---
 export function getOverallStats() {
   const attempts = getAttempts();
-  const totalQuestions = attempts.reduce((s, a) => s + a.total, 0);
-  const totalCorrect = attempts.reduce((s, a) => s + a.score, 0);
-  const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const streaks = getStreaks();
+
+  const uniqueAttempted = new Set();
+  const uniqueCorrect = new Set();
+
+  attempts.forEach(a => {
+    // New format with explicit metadata
+    if (a.attemptedQuestionMetadata && a.correctQuestionMetadata) {
+      a.attemptedQuestionMetadata.forEach(q => uniqueAttempted.add(q.id));
+      a.correctQuestionMetadata.forEach(q => uniqueCorrect.add(q.id));
+    }
+    // Middle format (IDs only)
+    else if (a.attemptedQuestionIds && a.correctQuestionIds) {
+      a.attemptedQuestionIds.forEach(id => uniqueAttempted.add(id));
+      a.correctQuestionIds.forEach(id => uniqueCorrect.add(id));
+    } else {
+      // Fallback for older attempts: we only know missed IDs for sure
+      if (a.missedQuestions) {
+        a.missedQuestions.forEach(mq => uniqueAttempted.add(mq.questionId));
+      }
+    }
+  });
+
+  const totalQuestions = uniqueAttempted.size;
+  const totalCorrect = uniqueCorrect.size;
+  const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
   return {
     totalAttempts: attempts.length,
-    totalQuestions,
-    totalCorrect,
-    accuracy,
+    totalQuestions, // This is now unique count
+    totalCorrect,   // This is now unique correct count
+    accuracy,       // This is now unique accuracy
     ...streaks,
   };
 }
 
 export function getCategoryStats() {
   const attempts = getAttempts();
-  const categoryMap = {};
+  const categoryMap = {}; // { categoryName: { attemptedSets: Set, correctSets: Set } }
 
   attempts.forEach(attempt => {
-    if (attempt.categoryBreakdown) {
-      Object.entries(attempt.categoryBreakdown).forEach(([cat, data]) => {
-        if (!categoryMap[cat]) categoryMap[cat] = { correct: 0, total: 0 };
-        categoryMap[cat].correct += data.correct;
-        categoryMap[cat].total += data.total;
+    // Priority: New metadata
+    if (attempt.attemptedQuestionMetadata && attempt.correctQuestionMetadata) {
+      attempt.attemptedQuestionMetadata.forEach(q => {
+        if (!categoryMap[q.category]) categoryMap[q.category] = { attempted: new Set(), correct: new Set() };
+        categoryMap[q.category].attempted.add(q.id);
       });
+      attempt.correctQuestionMetadata.forEach(q => {
+        if (!categoryMap[q.category]) categoryMap[q.category] = { attempted: new Set(), correct: new Set() };
+        categoryMap[q.category].correct.add(q.id);
+      });
+    }
+    // Fallback: Use missedQuestions to at least get attempted IDs for some categories
+    else if (attempt.missedQuestions) {
+      attempt.missedQuestions.forEach(mq => {
+        if (!categoryMap[mq.category]) categoryMap[mq.category] = { attempted: new Set(), correct: new Set() };
+        categoryMap[mq.category].attempted.add(mq.questionId);
+      });
+      // For correct ones in fallback, we lack IDs, so check categoryBreakdown for raw counts if unique not possible
     }
   });
 
   return Object.entries(categoryMap).map(([name, data]) => ({
     name,
-    correct: data.correct,
-    total: data.total,
-    accuracy: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0,
+    correct: data.correct.size,
+    total: data.attempted.size,
+    accuracy: data.attempted.size > 0 ? Math.round((data.correct.size / data.attempted.size) * 100) : 0,
   })).sort((a, b) => a.accuracy - b.accuracy);
 }
