@@ -164,8 +164,19 @@ function updateStreak() {
 // --- Analytics ---
 export function getOverallStats() {
   const attempts = getAttempts();
-  const totalQuestions = attempts.reduce((s, a) => s + a.total, 0);
-  const totalCorrect = attempts.reduce((s, a) => s + a.score, 0);
+
+  // Deduplicate by examId: keep only the most recent attempt per exam
+  // so repeated retakes don't inflate the question/accuracy counts.
+  const latestByExam = new Map();
+  for (const attempt of attempts) {
+    if (!latestByExam.has(attempt.examId)) {
+      latestByExam.set(attempt.examId, attempt);
+    }
+  }
+  const uniqueAttempts = Array.from(latestByExam.values());
+
+  const totalQuestions = uniqueAttempts.reduce((s, a) => s + a.total, 0);
+  const totalCorrect = uniqueAttempts.reduce((s, a) => s + a.score, 0);
   const accuracy =
     totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const streaks = getStreaks();
